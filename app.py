@@ -90,14 +90,13 @@ if st.button("Predict"):
     input_df = input_df[model_columns]
 
     # -------------------------
-    # Convert numeric columns to float and scale safely
+    # Apply scaling safely
     # -------------------------
-    existing_num_cols = [col for col in num_cols if col in input_df.columns]
-    for col in existing_num_cols:
-        input_df[col] = input_df[col].astype(float)
-
-    if existing_num_cols:
-        input_df[existing_num_cols] = scaler.transform(input_df[existing_num_cols])
+    # Use only the columns the scaler expects
+    scaler_cols = [col for col in scaler.feature_names_in_ if col in input_df.columns]
+    input_df[scaler_cols] = input_df[scaler_cols].astype(float)
+    if scaler_cols:
+        input_df[scaler_cols] = scaler.transform(input_df[scaler_cols])
 
     # -------------------------
     # Make Predictions
