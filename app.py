@@ -41,12 +41,15 @@ def get_llm_explanation(price, category, bedrooms, bathrooms, sqft, waterfront, 
     Explain clearly why the model predicted this price.
     Also explain why it was classified as {category}.
     """
-    response = client.chat.completions.create(
-        model="llama3-70b-8192",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3
-    )
-    return response.choices[0].message.content
+    try:
+        response = client.chat.completions.create(
+            model="llama3-70b-8192",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Could not fetch LLM explanation: {e}"
 
 # =========================
 # Streamlit UI
@@ -61,7 +64,10 @@ waterfront = st.selectbox("Waterfront", [0, 1])
 grade = st.slider("House Grade", 1, 13, 7)
 
 if st.button("Predict"):
+
+    # -------------------------
     # Create Input DataFrame
+    # -------------------------
     input_dict = {
         "bedrooms": bedrooms,
         "bathrooms": bathrooms,
@@ -71,25 +77,42 @@ if st.button("Predict"):
     }
     input_df = pd.DataFrame([input_dict])
 
-    # Match Training Columns
-    input_df = input_df.reindex(columns=model_columns, fill_value=0)
-
-    # =========================
-    # Apply Scaling Safely
-    # =========================
-    for col in num_cols:
+    # -------------------------
+    # Ensure all training columns exist
+    # -------------------------
+    for col in model_columns:
         if col not in input_df.columns:
-            input_df[col] = 0  # Add missing numeric columns as 0
+            input_df[col] = 0  # Fill missing columns with 0
 
+    # -------------------------
+    # Reorder columns exactly as model expects
+    # -------------------------
+    input_df = input_df[model_columns]
+
+    # -------------------------
+    # Convert numeric columns to float and scale safely
+    # -------------------------
     existing_num_cols = [col for col in num_cols if col in input_df.columns]
-    input_df[existing_num_cols] = scaler.transform(input_df[existing_num_cols])
+    for col in existing_num_cols:
+        input_df[col] = input_df[col].astype(float)
 
+    if existing_num_cols:
+        input_df[existing_num_cols] = scaler.transform(input_df[existing_num_cols])
+
+    # -------------------------
     # Make Predictions
-    predicted_price = regression_model.predict(input_df)[0]
-    category_value = classifier_model.predict(input_df)[0]
-    category = "High Price" if category_value == 1 else "Low Price"
+    # -------------------------
+    try:
+        predicted_price = regression_model.predict(input_df)[0]
+        category_value = classifier_model.predict(input_df)[0]
+        category = "High Price" if category_value == 1 else "Low Price"
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
+        st.stop()
 
+    # -------------------------
     # LLM Explanation
+    # -------------------------
     explanation = get_llm_explanation(
         predicted_price,
         category,
@@ -100,7 +123,9 @@ if st.button("Predict"):
         grade
     )
 
+    # -------------------------
     # Display Results
+    # -------------------------
     st.subheader("📊 Prediction Results")
     st.write(f"Predicted Price: ${predicted_price:,.2f}")
     st.write(f"Category: {category}")
