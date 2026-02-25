@@ -6,7 +6,7 @@ from openai import OpenAI
 import os
 
 # =========================
-# Load Saved Files
+# Load Models & Scaler
 # =========================
 regression_model = joblib.load("regression_model.pkl")
 classifier_model = joblib.load("classifier_model.pkl")
@@ -23,24 +23,24 @@ client = OpenAI(
 )
 
 # =========================
-# LLM Function
+# LLM Explanation
 # =========================
 def get_llm_explanation(price, category, bedrooms, bathrooms, sqft, waterfront, grade):
     prompt = f"""
-    A house has the following details:
+A house has the following details:
 
-    Predicted Price: {price:.2f} USD
-    Category: {category}
+Predicted Price: {price:.2f} USD
+Category: {category}
 
-    Bedrooms: {bedrooms}
-    Bathrooms: {bathrooms}
-    Living Area: {sqft} sqft
-    Waterfront: {waterfront}
-    Grade: {grade}
+Bedrooms: {bedrooms}
+Bathrooms: {bathrooms}
+Living Area: {sqft} sqft
+Waterfront: {waterfront}
+Grade: {grade}
 
-    Explain clearly why the model predicted this price.
-    Also explain why it was classified as {category}.
-    """
+Explain clearly why the model predicted this price.
+Also explain why it was classified as {category}.
+"""
     try:
         response = client.chat.completions.create(
             model="llama3-70b-8192",
@@ -66,7 +66,7 @@ grade = st.slider("House Grade", 1, 13, 7)
 if st.button("Predict"):
 
     # -------------------------
-    # Create Input DataFrame
+    # Create input DataFrame
     # -------------------------
     input_dict = {
         "bedrooms": bedrooms,
@@ -78,32 +78,26 @@ if st.button("Predict"):
     input_df = pd.DataFrame([input_dict])
 
     # -------------------------
-    # Ensure all training columns exist
+    # Prepare model input safely
     # -------------------------
+    # 1️⃣ Keep only columns the model expects
+    model_input = pd.DataFrame(columns=model_columns)
+
     for col in model_columns:
-        if col not in input_df.columns:
-            input_df[col] = 0  # Fill missing columns with 0
+        model_input[col] = input_df[col] if col in input_df.columns else 0
 
-    # -------------------------
-    # Reorder columns exactly as model expects
-    # -------------------------
-    input_df = input_df[model_columns]
-
-    # -------------------------
-    # Apply scaling safely
-    # -------------------------
-    # Use only the columns the scaler expects
-    scaler_cols = [col for col in scaler.feature_names_in_ if col in input_df.columns]
-    input_df[scaler_cols] = input_df[scaler_cols].astype(float)
+    # 2️⃣ Scale numeric columns safely
+    scaler_cols = [col for col in scaler.feature_names_in_ if col in model_input.columns]
     if scaler_cols:
-        input_df[scaler_cols] = scaler.transform(input_df[scaler_cols])
+        model_input[scaler_cols] = model_input[scaler_cols].astype(float)
+        model_input[scaler_cols] = scaler.transform(model_input[scaler_cols])
 
     # -------------------------
-    # Make Predictions
+    # Make predictions safely
     # -------------------------
     try:
-        predicted_price = regression_model.predict(input_df)[0]
-        category_value = classifier_model.predict(input_df)[0]
+        predicted_price = regression_model.predict(model_input)[0]
+        category_value = classifier_model.predict(model_input)[0]
         category = "High Price" if category_value == 1 else "Low Price"
     except Exception as e:
         st.error(f"Prediction failed: {e}")
