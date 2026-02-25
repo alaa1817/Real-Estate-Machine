@@ -8,7 +8,6 @@ import os
 # =========================
 # Load Saved Files
 # =========================
-
 regression_model = joblib.load("regression_model.pkl")
 classifier_model = joblib.load("classifier_model.pkl")
 model_columns = joblib.load("model_columns.pkl")
@@ -18,7 +17,6 @@ num_cols = joblib.load("num_cols.pkl")
 # =========================
 # Groq Client
 # =========================
-
 client = OpenAI(
     api_key=os.getenv("GROQ_API_KEY"),
     base_url="https://api.groq.com/openai/v1"
@@ -27,9 +25,7 @@ client = OpenAI(
 # =========================
 # LLM Function
 # =========================
-
 def get_llm_explanation(price, category, bedrooms, bathrooms, sqft, waterfront, grade):
-
     prompt = f"""
     A house has the following details:
 
@@ -45,22 +41,17 @@ def get_llm_explanation(price, category, bedrooms, bathrooms, sqft, waterfront, 
     Explain clearly why the model predicted this price.
     Also explain why it was classified as {category}.
     """
-
     response = client.chat.completions.create(
         model="llama3-70b-8192",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3
     )
-
     return response.choices[0].message.content
-
 
 # =========================
 # Streamlit UI
 # =========================
-
 st.title("🏠 AI Real Estate Price Prediction System")
-
 st.write("Enter house details below:")
 
 bedrooms = st.number_input("Bedrooms", 1, 10, 3)
@@ -70,7 +61,6 @@ waterfront = st.selectbox("Waterfront", [0, 1])
 grade = st.slider("House Grade", 1, 13, 7)
 
 if st.button("Predict"):
-
     # Create Input DataFrame
     input_dict = {
         "bedrooms": bedrooms,
@@ -79,19 +69,24 @@ if st.button("Predict"):
         "waterfront": waterfront,
         "grade": grade
     }
-
     input_df = pd.DataFrame([input_dict])
 
     # Match Training Columns
     input_df = input_df.reindex(columns=model_columns, fill_value=0)
 
-    # Apply Scaling
-    input_df[num_cols] = scaler.transform(input_df[num_cols])
+    # =========================
+    # Apply Scaling Safely
+    # =========================
+    for col in num_cols:
+        if col not in input_df.columns:
+            input_df[col] = 0  # Add missing numeric columns as 0
+
+    existing_num_cols = [col for col in num_cols if col in input_df.columns]
+    input_df[existing_num_cols] = scaler.transform(input_df[existing_num_cols])
 
     # Make Predictions
     predicted_price = regression_model.predict(input_df)[0]
     category_value = classifier_model.predict(input_df)[0]
-
     category = "High Price" if category_value == 1 else "Low Price"
 
     # LLM Explanation
