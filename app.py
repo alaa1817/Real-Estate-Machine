@@ -9,7 +9,7 @@ import os
 # Load Files
 # =========================
 regression_model = joblib.load("regress_model.pkl")
-classifier_model = joblib.load("class_model.pkl")
+classifier_model = joblib.load("classi_model.pkl")
 model_columns = joblib.load("model_columns.pkl")
 scaler = joblib.load("scaler.pkl")
 num_cols = joblib.load("num_cols.pkl")
