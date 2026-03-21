@@ -7,7 +7,7 @@ import os
 
 
 
-st.write(os.getenv("GROQ_API_KEY"))
+
 # =========================
 # Load models and preprocessing files
 # =========================
