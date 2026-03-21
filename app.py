@@ -94,7 +94,7 @@ if st.button("Predict"):
         'day': day
     }
 
-    input_df = df_cleaned.DataFrame([input_dict])
+    input_df = pd.DataFrame([input_dict])
 
     # 2️⃣ IMPORTANT: match training columns
     input_df = input_df.reindex(columns=model_columns, fill_value=0)
