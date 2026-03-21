@@ -100,7 +100,7 @@ if st.button("Predict"):
     input_df = input_df.reindex(columns=model_columns, fill_value=0)
 
     # 3️⃣ Apply scaling ONLY to numeric cols
-    input_df[num_cols] = scaler.transform(input_df[num_cols])
+    input_df[num_cols] = scaler.transform(input_df[num_cols].values)
 
     # 4️⃣ Predict
     predicted_price = regression_model.predict(input_df)[0]
