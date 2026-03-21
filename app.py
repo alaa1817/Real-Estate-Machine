@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
-from openai import OpenAI
-import os
 
 # =========================
 # Load models and preprocessing files
@@ -13,30 +11,6 @@ classifier_model = joblib.load("classifier_model.pkl")
 model_columns = joblib.load("model_columns.pkl")  # كل الأعمدة بعد one-hot
 scaler = joblib.load("scaler.pkl")
 num_cols = joblib.load("num_cols.pkl")  # الأعمدة الرقمية الأصلية فقط
-
-# =========================
-# LLM Client
-# =========================
-client = OpenAI(
-    api_key=os.getenv("GROQ_API_KEY"),
-    base_url="https://api.groq.com/openai/v1"
-)
-
-def get_llm_explanation(price, category):
-    prompt = f"""
-    A house price prediction system predicted:
-
-    Price: {price:.2f} USD
-    Category: {category}
-
-    Explain clearly why this prediction makes sense based on typical real estate factors.
-    """
-    response = client.chat.completions.create(
-        model="llama3-70b-8192",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3
-    )
-    return response.choices[0].message.content
 
 # =========================
 # Streamlit UI
@@ -92,14 +66,11 @@ if st.button("Predict"):
     valid_num_cols = [col for col in num_cols if col in input_df.columns]
     input_df[valid_num_cols] = scaler.transform(input_df[valid_num_cols])
 
-    # 4️⃣ Predict
+    # 4️⃣ Predictions
     predicted_price_log = regression_model.predict(input_df)
     predicted_price = np.expm1(predicted_price_log)[0]  # convert back from log
     category_value = classifier_model.predict(input_df)[0]
     category = "High Price" if category_value == 2 else "Medium Price" if category_value == 1 else "Low Price"
-
-    # 5️⃣ LLM Explanation
-    explanation = get_llm_explanation(predicted_price, category)
 
     # =========================
     # Output
@@ -107,6 +78,3 @@ if st.button("Predict"):
     st.subheader("📊 Results")
     st.write(f"Predicted Price: ${predicted_price:,.2f}")
     st.write(f"Category: {category}")
-
-    st.subheader("🧠 AI Explanation")
-    st.write(explanation)
