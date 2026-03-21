@@ -8,8 +8,8 @@ import os
 # =========================
 # Load Files
 # =========================
-regression_model = joblib.load("regression_model.pkl")
-classifier_model = joblib.load("classifier_model.pkl")
+regression_model = joblib.load("regress_model.pkl")
+classifier_model = joblib.load("class_model.pkl")
 model_columns = joblib.load("model_columns.pkl")
 scaler = joblib.load("scaler.pkl")
 num_cols = joblib.load("num_cols.pkl")
@@ -49,7 +49,7 @@ def get_llm_explanation(price, category):
 # =========================
 st.title("🏠 AI Real Estate Prediction")
 
-# Basic Inputs
+# Inputs
 bedrooms = st.number_input("Bedrooms", 1, 10, 3)
 bathrooms = st.number_input("Bathrooms", 1, 10, 2)
 sqft_living = st.number_input("Living Area", 100, 10000, 1500)
@@ -75,7 +75,7 @@ day = st.slider("Day", 1, 31, 15)
 # =========================
 if st.button("Predict"):
 
-    # 1️⃣ Create base input
+    # 1️⃣ Create input
     input_dict = {
         'bedrooms': bedrooms,
         'bathrooms': bathrooms,
@@ -96,16 +96,23 @@ if st.button("Predict"):
 
     input_df = pd.DataFrame([input_dict])
 
-    for col in num_cols:
-        if col in input_df.columns:
-            input_df[col] = scaler.transform(input_df[[col]])
+    # 2️⃣ Match training columns
+    input_df = input_df.reindex(columns=model_columns, fill_value=0)
 
-    
-    # 4️⃣ Predict
+    # 3️⃣ Scaling (IMPORTANT)
+    input_df[num_cols] = scaler.transform(input_df[num_cols])
+
+    # 4️⃣ Predictions
     predicted_price = regression_model.predict(input_df)[0]
     category_value = classifier_model.predict(input_df)[0]
 
-    category = "High Price" if category_value == 1 else "Low Price"
+    # 🔥 تعديل مهم هنا (3 classes بدل 2)
+    if category_value == 0:
+        category = "Low Price"
+    elif category_value == 1:
+        category = "Medium Price"
+    else:
+        category = "High Price"
 
     # 5️⃣ LLM Explanation
     explanation = get_llm_explanation(predicted_price, category)
