@@ -6,7 +6,7 @@ from openai import OpenAI
 import os
 
 # =========================
-# Load Models & Scaler
+# Load Files
 # =========================
 regression_model = joblib.load("regression_model.pkl")
 classifier_model = joblib.load("classifier_model.pkl")
@@ -23,108 +23,98 @@ client = OpenAI(
 )
 
 # =========================
-# LLM Explanation Function
+# LLM
 # =========================
-def get_llm_explanation(price, category, bedrooms, bathrooms, sqft, waterfront, grade):
+def get_llm_explanation(price, category):
     prompt = f"""
-A house has the following details:
+    A house price prediction system predicted:
 
-Predicted Price: {price:.2f} USD
-Category: {category}
+    Price: {price:.2f} USD
+    Category: {category}
 
-Bedrooms: {bedrooms}
-Bathrooms: {bathrooms}
-Living Area: {sqft} sqft
-Waterfront: {waterfront}
-Grade: {grade}
+    Explain clearly why this prediction makes sense based on typical real estate factors.
+    """
 
-Explain clearly why the model predicted this price.
-Also explain why it was classified as {category}.
-"""
-    try:
-        response = client.chat.completions.create(
-            model="llama3-70b-8192",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        return f"Could not fetch LLM explanation: {e}"
-
-# =========================
-# Streamlit UI
-# =========================
-st.title("🏠 AI Real Estate Price Prediction System")
-st.write("Enter house details below:")
-
-bedrooms = st.number_input("Bedrooms", 1, 10, 3)
-bathrooms = st.number_input("Bathrooms", 1, 10, 2)
-sqft = st.number_input("Living Area (sqft)", value=1500)
-waterfront = st.selectbox("Waterfront", [0, 1])
-grade = st.slider("House Grade", 1, 13, 7)
-
-if st.button("Predict"):
-
-    # -------------------------
-    # Create Input DataFrame
-    # -------------------------
-    input_dict = {
-        "bedrooms": bedrooms,
-        "bathrooms": bathrooms,
-        "sqft_living": sqft,
-        "waterfront": waterfront,
-        "grade": grade
-    }
-    input_df = pd.DataFrame([input_dict])
-
-    # -------------------------
-    # Ensure all training columns exist
-    # -------------------------
-    for col in model_columns:
-        if col not in input_df.columns:
-            input_df[col] = 0  # Placeholder for missing features (day, month, year, yr_renovated...)
-
-    # -------------------------
-    # Reorder columns exactly as model expects
-    # -------------------------
-    input_df = input_df[model_columns]
-
-    # -------------------------
-    # Convert numeric columns to float and scale safely
-    # -------------------------
-    scaler_cols = [col for col in num_cols if col in input_df.columns]
-    if scaler_cols:
-        input_df[scaler_cols] = input_df[scaler_cols].astype(float)
-        input_df[scaler_cols] = scaler.transform(input_df[scaler_cols])
-
-    # -------------------------
-    # Make predictions safely
-    # -------------------------
-    try:
-        predicted_price = regression_model.predict(input_df)[0]
-        category_value = classifier_model.predict(input_df)[0]
-        category = "High Price" if category_value == 1 else "Low Price"
-    except Exception as e:
-        st.error(f"Prediction failed: {e}")
-        st.stop()
-
-    # -------------------------
-    # LLM Explanation
-    # -------------------------
-    explanation = get_llm_explanation(
-        predicted_price,
-        category,
-        bedrooms,
-        bathrooms,
-        sqft,
-        waterfront,
-        grade
+    response = client.chat.completions.create(
+        model="llama3-70b-8192",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.3
     )
 
-    # -------------------------
-    # Display Results
-    # -------------------------
-    st.subheader("📊 Prediction Results")
+    return response.choices[0].message.content
+
+
+# =========================
+# UI
+# =========================
+st.title("🏠 AI Real Estate Prediction")
+
+# Basic Inputs
+bedrooms = st.number_input("Bedrooms", 1, 10, 3)
+bathrooms = st.number_input("Bathrooms", 1, 10, 2)
+sqft_living = st.number_input("Living Area", 100, 10000, 1500)
+sqft_lot = st.number_input("Lot Area", 500, 100000, 5000)
+floors = st.number_input("Floors", 1, 5, 1)
+
+waterfront = st.selectbox("Waterfront", [0, 1])
+view = st.slider("View", 0, 4, 0)
+condition = st.slider("Condition", 1, 5, 3)
+
+sqft_above = st.number_input("Sqft Above", 100, 10000, 1200)
+sqft_basement = st.number_input("Sqft Basement", 0, 5000, 300)
+
+yr_built = st.number_input("Year Built", 1900, 2025, 2000)
+yr_renovated = st.number_input("Year Renovated", 0, 2025, 0)
+
+year = st.number_input("Sale Year", 2000, 2025, 2014)
+month = st.slider("Month", 1, 12, 6)
+day = st.slider("Day", 1, 31, 15)
+
+# =========================
+# Prediction
+# =========================
+if st.button("Predict"):
+
+    # 1️⃣ Create base input
+    input_dict = {
+        'bedrooms': bedrooms,
+        'bathrooms': bathrooms,
+        'sqft_living': sqft_living,
+        'sqft_lot': sqft_lot,
+        'floors': floors,
+        'waterfront': waterfront,
+        'view': view,
+        'condition': condition,
+        'sqft_above': sqft_above,
+        'sqft_basement': sqft_basement,
+        'yr_built': yr_built,
+        'yr_renovated': yr_renovated,
+        'year': year,
+        'month': month,
+        'day': day
+    }
+
+    input_df = df_cleaned.DataFrame([input_dict])
+
+    # 2️⃣ IMPORTANT: match training columns
+    input_df = input_df.reindex(columns=model_columns, fill_value=0)
+
+    # 3️⃣ Apply scaling ONLY to numeric cols
+    input_df[num_cols] = scaler.transform(input_df[num_cols])
+
+    # 4️⃣ Predict
+    predicted_price = regression_model.predict(input_df)[0]
+    category_value = classifier_model.predict(input_df)[0]
+
+    category = "High Price" if category_value == 1 else "Low Price"
+
+    # 5️⃣ LLM Explanation
+    explanation = get_llm_explanation(predicted_price, category)
+
+    # =========================
+    # Output
+    # =========================
+    st.subheader("📊 Results")
     st.write(f"Predicted Price: ${predicted_price:,.2f}")
     st.write(f"Category: {category}")
 
