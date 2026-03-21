@@ -93,7 +93,9 @@ if st.button("Predict"):
         'month': month,
         'day': day
     }
-
+    st.write("Model Columns:", model_columns)
+    st.write("Num Cols:", num_cols)
+    st.write("Input DF Columns:", list(input_df.columns))
     input_df = pd.DataFrame([input_dict])
 
     # 2️⃣ Match training columns
