@@ -96,12 +96,11 @@ if st.button("Predict"):
 
     input_df = pd.DataFrame([input_dict])
 
-    # 2️⃣ IMPORTANT: match training columns
-    input_df = input_df.reindex(columns=model_columns, fill_value=0)
+    for col in num_cols:
+        if col in input_df.columns:
+            input_df[col] = scaler.transform(input_df[[col]])
 
-    # 3️⃣ Apply scaling ONLY to numeric cols
-    input_df[num_cols] = scaler.transform(input_df[num_cols].values)
-
+    
     # 4️⃣ Predict
     predicted_price = regression_model.predict(input_df)[0]
     category_value = classifier_model.predict(input_df)[0]
