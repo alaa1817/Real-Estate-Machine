@@ -35,7 +35,7 @@ def get_llm_explanation(price, category):
     Explain clearly why this prediction makes sense based on typical real estate factors.
     """
     response = client.chat.completions.create(
-        model="llama3-70b-8192",
+        model="llama3-8b-8192",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3
     )
