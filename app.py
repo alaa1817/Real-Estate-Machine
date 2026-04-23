@@ -73,8 +73,8 @@ waterfront = st.selectbox("Waterfront", [0, 1])
 view = st.slider("View", 0, 4, 0)
 condition = st.slider("Condition", 1, 5, 3)
 
-sqft_above = st.number_input("Sqft Above", 100, 10000, 1200)
-sqft_basement = st.number_input("Sqft Basement", 0, 5000, 300)
+sqft_above_m2 = st.number_input("Area Above Ground (m²)", 10.0, 1000.0, 111.0)
+sqft_basement_m2 = st.number_input("Basement Area (m²)", 0.0, 500.0, 28.0)
 
 yr_built = st.number_input("Year Built", 1900, 2025, 2000)
 yr_renovated = st.number_input("Year Renovated", 0, 2025, 0)
@@ -89,9 +89,11 @@ city = st.selectbox("City", cities)
 # Prediction
 # =========================
 if st.button("Predict"):
-    # Convert m² → sqft للـ living و lot بس
+    # Convert كل المساحات m² → sqft
     sqft_living = m2_to_sqft(sqft_living_m2)
     sqft_lot = m2_to_sqft(sqft_lot_m2)
+    sqft_above = m2_to_sqft(sqft_above_m2)
+    sqft_basement = m2_to_sqft(sqft_basement_m2)
 
     # Prepare input
     input_dict = {
