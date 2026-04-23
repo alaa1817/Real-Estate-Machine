@@ -41,6 +41,7 @@ def get_llm_explanation(price, category, city):
     Price: {price:.2f} USD
     Category: {category}
     City: {city}
+    Lot Area :{sqft_lot:0f} 
 
     Explain clearly why this prediction makes sense based on real estate factors such as:
     - location (city)
@@ -135,7 +136,7 @@ if st.button("Predict"):
     category = "High Price" if category_value == 2 else "Medium Price" if category_value == 1 else "Low Price"
 
     # LLM Explanation
-    explanation = get_llm_explanation(predicted_price, category, city)
+    explanation = get_llm_explanation(predicted_price, category, city ,sqft_lot)
 
     # =========================
     # Output
