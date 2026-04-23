@@ -28,6 +28,12 @@ client = OpenAI(
     base_url="https://api.groq.com/openai/v1"
 )
 
+# =========================
+# Conversion Function
+# =========================
+def m2_to_sqft(m2):
+    return m2 / 0.092903
+
 def get_llm_explanation(price, category, city):
     prompt = f"""
     A house price prediction system predicted:
@@ -58,28 +64,36 @@ st.title("🏠 AI Real Estate Prediction")
 # Inputs
 bedrooms = st.number_input("Bedrooms", 1, 10, 3)
 bathrooms = st.number_input("Bathrooms", 1, 10, 2)
-sqft_living = st.number_input("Living Area", 100, 10000, 1500)
-sqft_lot = st.number_input("Lot Area", 500, 100000, 5000)
+
+sqft_living_m2 = st.number_input("Living Area (m²)", 10.0, 1000.0, 139.0)
+sqft_lot_m2 = st.number_input("Lot Area (m²)", 50.0, 10000.0, 465.0)
+
 floors = st.number_input("Floors", 1, 5, 1)
 waterfront = st.selectbox("Waterfront", [0, 1])
 view = st.slider("View", 0, 4, 0)
 condition = st.slider("Condition", 1, 5, 3)
+
 sqft_above = st.number_input("Sqft Above", 100, 10000, 1200)
 sqft_basement = st.number_input("Sqft Basement", 0, 5000, 300)
+
 yr_built = st.number_input("Year Built", 1900, 2025, 2000)
 yr_renovated = st.number_input("Year Renovated", 0, 2025, 0)
 year = st.number_input("Sale Year", 2000, 2025, 2014)
 month = st.slider("Month", 1, 12, 6)
 day = st.slider("Day", 1, 31, 15)
 
-# ✅ City Input (dynamic)
+# City Input (dynamic)
 city = st.selectbox("City", cities)
 
 # =========================
 # Prediction
 # =========================
 if st.button("Predict"):
-    # 1️⃣ Prepare input
+    # Convert m² → sqft للـ living و lot بس
+    sqft_living = m2_to_sqft(sqft_living_m2)
+    sqft_lot = m2_to_sqft(sqft_lot_m2)
+
+    # Prepare input
     input_dict = {
         'bedrooms': bedrooms,
         'bathrooms': bathrooms,
@@ -100,25 +114,25 @@ if st.button("Predict"):
 
     input_df = pd.DataFrame([input_dict])
 
-    # 2️⃣ Add city as one-hot
+    # Add city as one-hot
     city_col = f"city_{city}"
     input_df[city_col] = 1
 
-    # 3️⃣ Match training columns
+    # Match training columns
     input_df = input_df.reindex(columns=model_columns, fill_value=0)
 
-    # 4️⃣ Scaling
+    # Scaling
     valid_num_cols = [col for col in num_cols if col in input_df.columns]
     input_df[valid_num_cols] = scaler.transform(input_df[valid_num_cols])
 
-    # 5️⃣ Predictions
+    # Predictions
     predicted_price_log = regression_model.predict(input_df)
     predicted_price = np.expm1(predicted_price_log)[0]
 
     category_value = classifier_model.predict(input_df)[0]
     category = "High Price" if category_value == 2 else "Medium Price" if category_value == 1 else "Low Price"
 
-    # 6️⃣ LLM Explanation
+    # LLM Explanation
     explanation = get_llm_explanation(predicted_price, category, city)
 
     # =========================
