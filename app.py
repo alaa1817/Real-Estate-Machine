@@ -34,17 +34,19 @@ client = OpenAI(
 def m2_to_sqft(m2):
     return m2 / 0.092903
 
-def get_llm_explanation(price, category, city):
+def get_llm_explanation(price, category, city, bedrooms, bathrooms):
     prompt = f"""
     A house price prediction system predicted:
 
     Price: {price:.2f} USD
     Category: {category}
     City: {city}
-   
+    Bedrooms: {bedrooms}
+    Bathrooms: {bathrooms}
 
     Explain clearly why this prediction makes sense based on real estate factors such as:
     - location (city)
+    - size (sqft)
     - number of rooms
     - condition
     Keep it simple and professional.
@@ -135,7 +137,7 @@ if st.button("Predict"):
     category = "High Price" if category_value == 2 else "Medium Price" if category_value == 1 else "Low Price"
 
     # LLM Explanation
-    explanation = get_llm_explanation(predicted_price, category, city)
+   explanation = get_llm_explanation(predicted_price, category, city, bedrooms, bathrooms)
 
     # =========================
     # Output
