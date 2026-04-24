@@ -43,6 +43,7 @@ def get_llm_explanation(price, category, city, bedrooms, bathrooms):
     City: {city}
     Bedrooms: {bedrooms}
     Bathrooms: {bathrooms}
+    Condition: {condition} out of 5
 
     Explain clearly why this prediction makes sense based on real estate factors such as:
     - location (city)
@@ -136,7 +137,7 @@ if st.button("Predict"):
     category = "High Price" if category_value == 2 else "Medium Price" if category_value == 1 else "Low Price"
 
     # LLM Explanation
-    explanation = get_llm_explanation(predicted_price, category, city, bedrooms, bathrooms)
+    explanation = get_llm_explanation(predicted_price, category, city, bedrooms, bathrooms,condition)
 
     # =========================
     # Output
