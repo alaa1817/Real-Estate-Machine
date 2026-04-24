@@ -46,7 +46,6 @@ def get_llm_explanation(price, category, city, bedrooms, bathrooms):
 
     Explain clearly why this prediction makes sense based on real estate factors such as:
     - location (city)
-    - size (sqft)
     - number of rooms
     - condition
     Keep it simple and professional.
